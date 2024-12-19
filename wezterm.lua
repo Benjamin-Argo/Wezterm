@@ -72,62 +72,26 @@ config.default_prog = {
    ]],
 }
 
--- Vim detection functions
-local function is_vim(pane)
-	local process_name = pane:get_foreground_process_name():lower()
-	local title = pane:get_title():lower()
-	local vim_patterns = { "nvim", "node", "neovim", "vim", "editor", "%.nvim%-qt$" }
-
-	for _, pattern in ipairs(vim_patterns) do
-		if process_name:find(pattern) or title:find(pattern) then
-			return true
-		end
-	end
-	return false
-end
-
-local function is_editor_pane(pane)
-	return pane and is_vim(pane)
-end
-
--- State management
-wezterm.on("toggle-state-updated", function(window, pane)
-	local overrides = window:get_config_overrides() or {}
-	overrides.term_visible = not (overrides.term_visible or false)
-	window:set_config_overrides(overrides)
-end)
-
--- Keybindings
+-- Key bindings
 config.keys = {
+
 	-- Split panes
-	{ key = "-", mods = "ALT", action = wezterm.action.SplitVertical({ domain = "CurrentPaneDomain" }) },
-	{ key = "\\", mods = "ALT", action = wezterm.action.SplitHorizontal({ domain = "CurrentPaneDomain" }) },
+	{ key = "-", mods = "ALT", action = act.SplitVertical({ domain = "CurrentPaneDomain" }) },
+	{ key = "\\", mods = "ALT", action = act.SplitHorizontal({ domain = "CurrentPaneDomain" }) },
 
-	-- Pane navigation
-	{ key = "LeftArrow", mods = "ALT", action = wezterm.action.ActivatePaneDirection("Left") },
-	{ key = "RightArrow", mods = "ALT", action = wezterm.action.ActivatePaneDirection("Right") },
-	{ key = "UpArrow", mods = "ALT", action = wezterm.action.ActivatePaneDirection("Up") },
-	{ key = "DownArrow", mods = "ALT", action = wezterm.action.ActivatePaneDirection("Down") },
+	-- Vim-style navigation (ALT + hjkl)
+	{ key = "h", mods = "ALT", action = act.ActivatePaneDirection("Left") },
+	{ key = "l", mods = "ALT", action = act.ActivatePaneDirection("Right") },
+	{ key = "k", mods = "ALT", action = act.ActivatePaneDirection("Up") },
+	{ key = "j", mods = "ALT", action = act.ActivatePaneDirection("Down") },
 
-	-- Quick actions
-	{
-		key = "W",
-		mods = "CTRL|SHIFT",
-		action = wezterm.action.SpawnCommandInNewTab({
-			args = { "nvim", wezterm.config_dir .. "/wezterm.lua" },
-		}),
-	},
-	{
-		key = "I",
-		mods = "CTRL|SHIFT",
-		action = wezterm.action.SendString(
-			"sam build && sam local invoke --docker-network lambda-network -e events/ses-s3-event.json\n"
-		),
-	},
-	-- Toggle decorations
+	-- Zoom toggle (ALT+m)
+	{ key = "m", mods = "ALT", action = act.TogglePaneZoomState },
+	{ key = "w", mods = "ALT", action = act.CloseCurrentPane({ confirm = false }) },
+	-- Quick actions (restored from your original config)
 	{
 		key = "D",
-		mods = "CTRL|ALT",
+		mods = "CTRL|ALT|SHIFT",
 		action = wezterm.action_callback(function(window, _pane)
 			local overrides = window:get_config_overrides() or {}
 			if not overrides.window_decorations then
@@ -138,65 +102,12 @@ config.keys = {
 			window:set_config_overrides(overrides)
 		end),
 	},
-
-	-- Terminal toggle (Ctrl-;)
 	{
-		key = ";",
-		mods = "CTRL",
-		action = wezterm.action_callback(function(window, pane)
-			local tab = window:active_tab()
-			local panes = tab:panes()
-			local editor_pane = nil
-			local bottom_panes = {}
-
-			for _, p in ipairs(panes) do
-				if is_editor_pane(p) then
-					editor_pane = p
-				else
-					table.insert(bottom_panes, p)
-				end
-			end
-
-			if #bottom_panes > 0 then
-				editor_pane:activate()
-				window:perform_action(act.TogglePaneZoomState, editor_pane)
-			else
-				window:perform_action(
-					act.SplitPane({
-						direction = "Down",
-						size = { Percent = 30 },
-					}),
-					pane
-				)
-			end
-		end),
-	},
-
-	-- Toggle focus (Ctrl-t)
-	{
-		key = "t",
-		mods = "CTRL",
-		action = wezterm.action_callback(function(window, pane)
-			local current_pane = window:active_pane()
-			local tab = window:active_tab()
-			local panes = tab:panes()
-
-			if is_editor_pane(current_pane) then
-				for _, p in ipairs(panes) do
-					if not is_editor_pane(p) then
-						p:activate()
-						return
-					end
-				end
-			else
-				for _, p in ipairs(panes) do
-					if is_editor_pane(p) then
-						p:activate()
-						return
-					end
-				end
-			end
-		end),
+		key = "I",
+		mods = "CTRL|SHIFT",
+		action = act.SendString(
+			"sam build && sam local invoke --docker-network lambda-network -e events/ses-s3-event.json\n"
+		),
 	},
 }
 
