@@ -87,6 +87,8 @@ config.keys = {
 
 	-- Zoom toggle (ALT+m)
 	{ key = "m", mods = "ALT", action = act.TogglePaneZoomState },
+
+	--close pane (ALT+w)
 	{ key = "w", mods = "ALT", action = act.CloseCurrentPane({ confirm = false }) },
 	-- Quick actions (restored from your original config)
 	{
